@@ -51,6 +51,10 @@ void run_command(cmd *command);
 cmd* parse_command(char *command_str);
 cmd* build_exec(char *argv[], int argc);
 cmd* build_pipe(cmd *left, cmd *right);
+char* locate_beginning(char *str, char *trimchars); 
+char* locate_end(char *str, char *trimchars);
+char* get_token_end(char *token, char *delimiters);
+char* get_next_token(char *beginning, char *delimiters);
 
 /* Execution begins here. Go into infinite input loop. */
 
@@ -104,45 +108,73 @@ void run_command(cmd *command)
     }
 }
 
+/* Only exec commands work for now. */
 cmd* parse_command(char *cmd_str)
 {
-    /* TODO: Remove trailing whitespace. */
-    /* TODO: Generalize delimiters. */
-    /* Only exec commands work for now. */
+    /* TODO: Clean this mess up. */
+    char whitespace[] = " \t\r\n\v";
+    char *cmd_end;
+    cmd_end = locate_end(cmd_str, whitespace);
+    cmd_str = locate_beginning(cmd_str, whitespace);
+    *cmd_end = '\0';
+
     int argc = 0;
-    char *cmd_str_ptr = cmd_str; // Current position during traversal.
-    char *cmd_str_end = cmd_str + strlen(cmd_str);
     char *argv[MAXARGS];
 
-    /* Remove trailing newline. */
-    *(cmd_str_end - 1) = '\0';
-
-    /* Chop up cmd_string by delimiters (only ' ' for now). */
-    while (cmd_str_ptr < cmd_str_end)
+    char *token = cmd_str;
+    char *token_end;
+    while (token)
     {
-        char *next_token = strchr(cmd_str_ptr, ' ');
+        /* Null-terminate this token. */
+        token_end = get_token_end(token, whitespace); 
+        *token_end = '\0';
 
-        if (next_token == NULL)
-        {
-            /* This is the last token. */
-            argv[argc] = cmd_str_ptr;
-            argc++;
+        /* Add this token to the args. */
+        argv[argc] = token;
+        argc++;
 
-            /* Manually set next token to indicate end of tokens. */
-            next_token = cmd_str_end;
-        }
-        else
-        {
-            argv[argc] = cmd_str_ptr;
-            argc++;
-
-            *next_token = '\0';
-            next_token++;
-        }
-        /* Set the "current pointer" to next token for upcoming iteration. */
-        cmd_str_ptr = next_token;
+        /* Search for next token after the end of this one. */
+        token = get_next_token(token_end + 1, whitespace);
     }
     return build_exec(argv, argc);
+}
+
+char* get_token_end(char *token, char *delimiters)
+{
+    char *token_ptr = token;
+    while (!strchr(delimiters, *token_ptr) && *token_ptr != '\0')
+        token_ptr++;
+
+    return token_ptr;
+}
+
+/* Skip delimiters and return next token. */
+char* get_next_token(char *beginning, char *delimiters)
+{
+    char *cmd_end = beginning + strlen(beginning);
+    char *token = beginning;
+    int delimiter_found = 0;
+
+    /* Search for first non-delimiter occuring after a delimiter.
+     * If we reach end of the whole command, this was the last token. */
+    while (token < cmd_end)
+    {
+        if (delimiter_found && !strchr(delimiters, *token))
+        {
+            /* A non-delimiter after a delimiter was found. */
+            return token;   
+        }
+
+        if (!delimiter_found && strchr(delimiters, *token))
+        {
+            delimiter_found = 1;
+        }
+
+        token++;
+    }
+
+    /* Return NULL to indicate there is no next token. */
+    return NULL;
 }
 
 /* Type builders. */
@@ -175,4 +207,21 @@ cmd* build_pipe(cmd *left, cmd *right)
 int has_prefix(char *string, char *prefix)
 {
     return strncmp(prefix, string, strlen(prefix));
+}
+
+/* Return ptr to first non-trim character from end. */
+char* locate_end(char *str, char *trimchars) 
+{
+    char *str_end = str + strlen(str);
+    while (strchr(trimchars, *str_end) != NULL)
+       str_end--;
+    return str_end + 1;
+}
+
+/* Return ptr to first non-trim character. */
+char* locate_beginning(char *str, char *trimchars) 
+{
+    while (strchr(trimchars, *str) != NULL)
+       str++;
+    return str;
 }

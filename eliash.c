@@ -1,5 +1,3 @@
-/* Simple implemetation of a shell. */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,56 +5,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define MAXARGS 10
-#define BUFLEN 100
+#include "eliash.h"
 
-/* These are the types the parser will translate commands into. */
-
-/* Resolve circular dependency in structs. */
-typedef struct cmd cmd;
-
-typedef enum {
-    CMD_EXEC,
-    CMD_REDIR,
-    CMD_PIPE
-} cmd_type;
-
-typedef struct exec {
-    char *argv[MAXARGS];
-} cmd_exec;
-
-typedef struct redir {
-    cmd     *cmd;
-    char    *fp;
-    int      mode;
-    int      fd;
-} cmd_redir;
-
-typedef struct pipe {
-    cmd     *left;
-    cmd     *right;
-} cmd_pipe;
-
-typedef struct cmd {
-    cmd_type type;
-    union cmd_data {
-        cmd_pipe  pipe;
-        cmd_redir redir;
-        cmd_exec  exec;
-    } data;
-} cmd;
-
-int has_prefix(char *string, char *prefix);
-void run_command(cmd *command);
-cmd* parse_command(char *command_str);
-cmd* build_exec(char *argv[], int argc);
-cmd* build_pipe(cmd *left, cmd *right);
-char* locate_beginning(char *str, char *trimchars); 
-char* locate_end(char *str, char *trimchars);
-char* get_token_end(char *token, char *delimiters);
-char* get_next_token(char *beginning, char *delimiters);
-
-/* Execution begins here. Go into infinite input loop. */
 
 int main(void)
 {
@@ -74,7 +24,7 @@ int main(void)
         /* cd is manipulates current process, no fork. */
         if (has_prefix(inbuf, "cd ") == 0)
         {
-            *(inbuf + strlen(inbuf) - 1) = '\0';
+            inbuf[strlen(inbuf) - 1] = '\0';
             if (chdir(inbuf + 3) < 0)
             {
                 perror("Cannot cd");
@@ -85,9 +35,14 @@ int main(void)
         /* Other commands are forked before execed. */ 
         int pid, status;
         if ((pid = fork()) == 0)
-            run_command(parse_command(inbuf));
+        {
+            cmd *command = parse_tokens(inbuf);
+            run_command(command);
+        }
         else
+        {
             wait(&status);
+        }
     }
     exit(EXIT_SUCCESS);
 }
@@ -108,32 +63,32 @@ void run_command(cmd *command)
     }
 }
 
-/* Only exec commands work for now. */
-cmd* parse_command(char *cmd_str)
+/* Parser functions. */
+
+
+/* Parse and chop tokens in cmdstr _in place_. This means that every
+ * token separated by some delimiters (whitespace) gets chopped into
+ * their own null-terminated strings and placed into argv. */
+char whitespace[] = " \t\r\n\v";
+cmd* parse_tokens(char *cmdstr)
 {
-    /* TODO: Clean this mess up. */
-    char whitespace[] = " \t\r\n\v";
-    char *cmd_end;
-    cmd_end = locate_end(cmd_str, whitespace);
-    cmd_str = locate_beginning(cmd_str, whitespace);
-    *cmd_end = '\0';
-
-    int argc = 0;
     char *argv[MAXARGS];
+    int argc = 0;
 
-    char *token = cmd_str;
-    char *token_end;
+    cmdstr = trimcmd(cmdstr, whitespace);
+
+    char *token = cmdstr;
     while (token)
     {
-        /* Null-terminate this token. */
-        token_end = get_token_end(token, whitespace); 
+        /* Chop this token. */
+        char *token_end = get_token_end(token, whitespace); 
         *token_end = '\0';
 
-        /* Add this token to the args. */
+        /* Point current arg to this token. */
         argv[argc] = token;
         argc++;
 
-        /* Search for next token after the end of this one. */
+        /* Get beginning of next token. */
         token = get_next_token(token_end + 1, whitespace);
     }
     return build_exec(argv, argc);
@@ -141,43 +96,27 @@ cmd* parse_command(char *cmd_str)
 
 char* get_token_end(char *token, char *delimiters)
 {
-    char *token_ptr = token;
-    while (!strchr(delimiters, *token_ptr) && *token_ptr != '\0')
-        token_ptr++;
-
-    return token_ptr;
+    while (!strchr(delimiters, *token) && *token != '\0')
+        token++;
+    return token;
 }
 
-/* Skip delimiters and return next token. */
-char* get_next_token(char *beginning, char *delimiters)
+char* get_next_token(char *token, char *delimiters)
 {
-    char *cmd_end = beginning + strlen(beginning);
-    char *token = beginning;
+    char *cmd_end = token + strlen(token);
     int delimiter_found = 0;
-
-    /* Search for first non-delimiter occuring after a delimiter.
-     * If we reach end of the whole command, this was the last token. */
     while (token < cmd_end)
     {
         if (delimiter_found && !strchr(delimiters, *token))
-        {
-            /* A non-delimiter after a delimiter was found. */
             return token;   
-        }
 
         if (!delimiter_found && strchr(delimiters, *token))
-        {
             delimiter_found = 1;
-        }
 
         token++;
     }
-
-    /* Return NULL to indicate there is no next token. */
-    return NULL;
+    return NULL; // No next token exists.
 }
-
-/* Type builders. */
 
 cmd* build_exec(char *argv[], int argc)
 {
@@ -186,9 +125,7 @@ cmd* build_exec(char *argv[], int argc)
 
     /* Copy parsed args into the exec struct. */
     for (int i = 0; i < argc; i++)
-    {
         command->data.exec.argv[i] = argv[i];
-    }
 
     return command;
 }
@@ -202,26 +139,30 @@ cmd* build_pipe(cmd *left, cmd *right)
     return command;
 }
 
-/* Some helper functions. */
+/* Utility functions. */
 
 int has_prefix(char *string, char *prefix)
 {
     return strncmp(prefix, string, strlen(prefix));
 }
 
-/* Return ptr to first non-trim character from end. */
-char* locate_end(char *str, char *trimchars) 
+char* trimcmd(char *cmd, char *trimchars)
 {
-    char *str_end = str + strlen(str);
-    while (strchr(trimchars, *str_end) != NULL)
-       str_end--;
-    return str_end + 1;
+    del_trailing(cmd, trimchars);
+    return del_leading(cmd, trimchars);
 }
 
-/* Return ptr to first non-trim character. */
-char* locate_beginning(char *str, char *trimchars) 
+void del_trailing(char *str, char *trimchars) 
 {
-    while (strchr(trimchars, *str) != NULL)
+    char *strend = str + strlen(str);
+    while (strchr(trimchars, *strend))
+       strend--;
+    *(strend + 1) = '\0';
+}
+
+char* del_leading(char *str, char *trimchars) 
+{
+    while (strchr(trimchars, *str))
        str++;
     return str;
 }

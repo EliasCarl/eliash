@@ -61,7 +61,15 @@ void run_command(cmd *command)
             fprintf(stderr, "Redirection not implemented.");
             break;
         case CMD_PIPE:
-            fprintf(stderr, "Pipes not implemented.");
+            cmd* leftcmd = command->data.pipe.left;
+            cmd* rightcmd = command->data.pipe.right;
+
+            /* leftcmd and rightcmd must be exec cmds for now.
+             * Since the parser can't handle anything else. */
+
+            int pid = fork();
+
+
             break;
     }
 }
@@ -71,6 +79,8 @@ void run_command(cmd *command)
  * Parse and chop tokens in cmdstr _in place_. This means that every
  * token separated by some delimiters (whitespace) gets chopped into
  * their own null-terminated strings and placed into argv. 
+ *
+ * TODO: Simple implementation of _one_ pipe.
  */
 char whitespace[] = " \t\r\n\v";
 cmd* parse_tokens(char *cmdstr)

@@ -61,14 +61,24 @@ void run_command(cmd *command)
             fprintf(stderr, "Redirection not implemented.");
             break;
         case CMD_PIPE:
-            cmd* leftcmd = command->data.pipe.left;
-            cmd* rightcmd = command->data.pipe.right;
+
+            int pipefd[2];
+            pipe(pipfd);
 
             /* leftcmd and rightcmd must be exec cmds for now.
              * Since the parser can't handle anything else. */
 
             int pid = fork();
-
+            if (pid == 0)
+            {
+                /* Fork a new process for leftcmd. */
+                close(pipefd[0]);  // Close read end of pipe.
+                fclose(stdout);    // Free stdout.
+                fdopen(pipefd[1]); // Open write end on stdout.
+                
+                /* stdout now writes to pipe. */
+                run_command(command->data.pipe.left);
+            }
 
             break;
     }

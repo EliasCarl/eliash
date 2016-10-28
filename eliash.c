@@ -7,7 +7,7 @@
 
 #include "eliash.h"
 
-
+/* Begin read-eval loop. */
 int main(void)
 {
     static char inbuf[BUFLEN]; 
@@ -63,12 +63,12 @@ void run_command(cmd *command)
     }
 }
 
-/* Parser functions. */
 
-
-/* Parse and chop tokens in cmdstr _in place_. This means that every
+/* 
+ * Parse and chop tokens in cmdstr _in place_. This means that every
  * token separated by some delimiters (whitespace) gets chopped into
- * their own null-terminated strings and placed into argv. */
+ * their own null-terminated strings and placed into argv. 
+ */
 char whitespace[] = " \t\r\n\v";
 cmd* parse_tokens(char *cmdstr)
 {
@@ -88,7 +88,7 @@ cmd* parse_tokens(char *cmdstr)
         argv[argc] = token;
         argc++;
 
-        /* Get beginning of next token. */
+        /* Start search of next token at token_end + 1.*/
         token = get_next_token(token_end + 1, whitespace);
     }
     return build_exec(argv, argc);

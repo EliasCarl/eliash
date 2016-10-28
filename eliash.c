@@ -32,17 +32,20 @@ int main(void)
             continue;
         }
 
-        /* Other commands are forked before execed. */ 
-        int pid, status;
-        if ((pid = fork()) == 0)
+        int pid = fork();
+        if (pid == -1)
+        {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
+
+        if (pid == 0)
         {
             cmd *command = parse_tokens(inbuf);
             run_command(command);
         }
         else
-        {
-            wait(&status);
-        }
+            wait(NULL);
     }
     exit(EXIT_SUCCESS);
 }
@@ -156,13 +159,13 @@ void del_trailing(char *str, char *trimchars)
 {
     char *strend = str + strlen(str);
     while (strchr(trimchars, *strend))
-       strend--;
+        strend--;
     *(strend + 1) = '\0';
 }
 
 char* del_leading(char *str, char *trimchars) 
 {
     while (strchr(trimchars, *str))
-       str++;
+        str++;
     return str;
 }

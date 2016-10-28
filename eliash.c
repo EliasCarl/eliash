@@ -78,6 +78,7 @@ cmd* parse_tokens(char *cmdstr)
     char *argv[MAXARGS];
     int argc = 0;
 
+    /* Trim leading and trailing whitespace. */
     cmdstr = trimcmd(cmdstr, whitespace);
 
     char *token = cmdstr;

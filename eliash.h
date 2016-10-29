@@ -44,13 +44,22 @@ typedef struct redir {
 } cmd_redir;
 
 /*
- *
+ * Since pipes are pretty much handled by the kernel only the two
+ * commands involved in the pipes are needed. See the implementation
+ * of run_command in eliash.c to see how pipes are used by the shell.
  */
 typedef struct pipe {
     cmd     *left;
     cmd     *right;
 } cmd_pipe;
 
+/*
+ * This is the general command structure. Since a command is either
+ * one of the three already described, a union helps to generalize.
+ * The cmd_type indicates to the shell how to interpret the union.
+ * This makes it possible to pass any of the three commands to 
+ * run_command.
+ */
 typedef struct cmd {
     cmd_type type;
     union cmd_data {

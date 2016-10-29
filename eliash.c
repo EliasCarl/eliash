@@ -11,7 +11,7 @@ int main(void)
         if (fgets(inbuf, BUFLEN, stdin) == NULL)
         {
             fprintf(stderr, "Error reading input\n");
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
         }
 
         /* cd manipulates current process, no fork. */
@@ -34,7 +34,7 @@ int main(void)
 
         if (pid == 0)
         {
-            cmd *command = parse_input(inbuf);
+            cmd *command = parse_command(inbuf);
             run_command(command);
         }
         else
@@ -57,6 +57,19 @@ void run_command(cmd *command)
     }
     else if (command->type == CMD_PIPE)
     {
+
+        /*
+         * TODO: How to deal with more than one pipe? Considering this
+         * input: "/bin/echo hej | /bin/cat | /bin/less", the middle 
+         * command is both a right and left end of a pipe. These kinds
+         * of pipes are still undefined and are not handled.
+         *
+         * The parser reads from left to right and will call it a right
+         * pipe (a read-end) which signals to the run_command function
+         * to close the write pipe. But really we use connect stdout and
+         * stdin to two different pipes, how?
+         */
+
         int pipefd[2];
         if (pipe(pipefd) < 0)
         {

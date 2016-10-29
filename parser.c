@@ -20,31 +20,37 @@
  */
 
 #include "eliash.h"
+static char whitespace[] = " \t\r\n\v";
 
-cmd* parse_input(char *cmdstr)
+/*
+ * Search for the exec commands and construct them with whatever
+ * redirection and piping can be found. When an exec command has
+ * been isolated, it is parsed and built by parse_exec.
+ */
+cmd* parse_command(char *cmdstr)
 {
-    char *pc;
-    if (pc = strchr(cmdstr, '|'))
+    char *cmdbeginning = cmdstr;
+    while (*cmdstr)
     {
-        *pc = '\0';
-        char *right  = pc + 1;
-        char *left = cmdstr;
-        return build_pipe(parse_tokens(left), parse_tokens(right));
+        if (*cmdstr == '|')
+        {
+            (*cmdstr) = '\0';
+            return build_pipe(parse_exec(cmdbeginning), parse_command(cmdstr + 1));
+        }
+        cmdstr++;
     }
-    return parse_tokens(cmdstr);
+    return parse_exec(cmdbeginning);
 }
 
-
-char whitespace[] = " \t\r\n\v";
-cmd* parse_tokens(char *cmdstr)
+cmd* parse_exec(char *execstr)
 {
     /* Trim leading and trailing whitespace. */
-    cmdstr = trimcmd(cmdstr, whitespace);
+    execstr = trimcmd(execstr, whitespace);
 
     char *argv[MAXARGS];
     int argc = 0;
 
-    char *token = cmdstr;
+    char *token = execstr;
     while (token)
     {
         /* Chop this token. */
@@ -55,7 +61,6 @@ cmd* parse_tokens(char *cmdstr)
         argv[argc] = token;
         argc++;
 
-        /* Start search of next token at token_end + 1.*/
         token = get_next_token(token_end + 1, whitespace);
     }
     return build_exec(argv, argc);
@@ -70,6 +75,9 @@ char* get_token_end(char *token, char *delimiters)
 
 char* get_next_token(char *token, char *delimiters)
 {
+    if (!strchr(delimiters, *token))
+        return token; // Already on a token.
+
     char *cmd_end = token + strlen(token);
     int delimiter_found = 0;
     while (token < cmd_end)

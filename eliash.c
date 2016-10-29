@@ -63,11 +63,6 @@ void run_command(cmd *command)
          * input: "/bin/echo hej | /bin/cat | /bin/less", the middle 
          * command is both a right and left end of a pipe. These kinds
          * of pipes are still undefined and are not handled.
-         *
-         * The parser reads from left to right and will call it a right
-         * pipe (a read-end) which signals to the run_command function
-         * to close the write pipe. But really we use connect stdout and
-         * stdin to two different pipes, how?
          */
 
         int pipefd[2];

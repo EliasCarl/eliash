@@ -41,47 +41,96 @@ int main(void)
 
         if (pid == 0)
         {
-            cmd *command = parse_tokens(inbuf);
+            cmd *command = parse_input(inbuf);
             run_command(command);
         }
         else
+        {
             wait(NULL);
+        }
     }
     exit(EXIT_SUCCESS);
 }
 
 void run_command(cmd *command)
 {
-    switch (command->type)
+    if (command->type == CMD_EXEC)
     {
-        case CMD_EXEC:
-            execv(command->data.exec.argv[0], command->data.exec.argv);
-            break;
-        case CMD_REDIR:
-            fprintf(stderr, "Redirection not implemented.");
-            break;
-        case CMD_PIPE:
-
-            int pipefd[2];
-            pipe(pipfd);
-
-            /* leftcmd and rightcmd must be exec cmds for now.
-             * Since the parser can't handle anything else. */
-
-            int pid = fork();
-            if (pid == 0)
-            {
-                /* Fork a new process for leftcmd. */
-                close(pipefd[0]);  // Close read end of pipe.
-                fclose(stdout);    // Free stdout.
-                fdopen(pipefd[1]); // Open write end on stdout.
-                
-                /* stdout now writes to pipe. */
-                run_command(command->data.pipe.left);
-            }
-
-            break;
+        execv(command->data.exec.argv[0], command->data.exec.argv);
     }
+    else if (command->type == CMD_REDIR)
+    {
+        fprintf(stderr, "Redirection not implemented.");
+    }
+    else if (command->type == CMD_PIPE)
+    {
+        int pipefd[2];
+        if (pipe(pipefd) < 0)
+        {
+            perror("Error establishing pipe.");
+            exit(EXIT_FAILURE);
+        }
+
+        /* leftcmd and rightcmd must be exec cmds for now.
+         * Since the parser can't handle anything else. */
+
+        int pid = fork();
+        if (pid == 0)
+        {
+            /* Fork a new process for leftcmd. */
+            close(pipefd[0]);  // Close read end of pipe.
+            fclose(stdout);    // Free stdout.
+            dup(pipefd[1]);    // Open write end on stdout.
+            close(pipefd[1]);  // Close pipe after duped fd.
+
+            /* stdout now writes to pipe. */
+            run_command(command->data.pipe.left);
+        }
+
+        pid = fork();
+        if (pid == 0)
+        {
+            /* Fork a new process for rightcmd. */
+            close(pipefd[1]);  // Close write end of pipe.
+            fclose(stdin);     // Free stdout.
+            dup(pipefd[0]);    // Open write end on stdout.
+            close(pipefd[0]);  // Close pipe after duped fd.
+
+            /* stdout now writes to pipe. */
+            run_command(command->data.pipe.right);
+        }
+
+        /* Close pipe in parent process. */
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        /* Wair for both children to finish. */
+        wait(NULL);
+        wait(NULL);
+    }
+}
+
+cmd* parse_input(char *cmdstr)
+{
+    char *pc; // Ptr to pipe char.
+    if (pc = strchr(cmdstr, '|'))
+    {
+        /* 
+         * There is a pipe character. For now assume there is only
+         * _one_ pipe. Chop the cmdstr into the cmd before and after
+         * the pipe (|) character, parse these and put into a pipecmd.
+         *
+         * TODO: What if pipe char is in beginning or end of cmdstr?
+         */
+
+        /* Chop the string where the pipe was. */
+        *pc = '\0';
+
+        char *right  = pc + 1;
+        char *left = cmdstr;
+        return build_pipe(parse_tokens(left), parse_tokens(right));
+    }
+    return parse_tokens(cmdstr);
 }
 
 
@@ -95,11 +144,11 @@ void run_command(cmd *command)
 char whitespace[] = " \t\r\n\v";
 cmd* parse_tokens(char *cmdstr)
 {
-    char *argv[MAXARGS];
-    int argc = 0;
-
     /* Trim leading and trailing whitespace. */
     cmdstr = trimcmd(cmdstr, whitespace);
+
+    char *argv[MAXARGS];
+    int argc = 0;
 
     char *token = cmdstr;
     while (token)

@@ -38,10 +38,10 @@ typedef struct cmd {
 void run_command(cmd *command);
 
 /* Parser functions. */
-
 cmd* parse_tokens(char *cmdstr);
 cmd* build_exec(char *argv[], int argc);
 cmd* build_pipe(cmd *left, cmd *right);
+cmd* parse_input(char *cmdstr);
 char* locate_beginning(char *str, char *trimchars); 
 char* locate_end(char *str, char *trimchars);
 char* get_token_end(char *token, char *delimiters);

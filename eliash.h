@@ -1,3 +1,13 @@
+#ifndef ELIASH_H
+#define ELIASH_H
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #define MAXARGS 10
 #define BUFLEN 100
 
@@ -52,3 +62,5 @@ int has_prefix(char *string, char *prefix);
 void del_trailing(char *str, char *trimchars);
 char* del_leading(char *str, char *trimchars);
 char* trimcmd(char *cmd, char *trimchars);
+
+#endif

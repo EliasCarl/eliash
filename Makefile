@@ -1,2 +1,2 @@
 eliash :
-	gcc -Wall -g eliash.c -o eliash.o
+	gcc -Wall -g eliash.c parser.c -o eliash.o

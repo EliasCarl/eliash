@@ -21,7 +21,7 @@ int main(void)
             exit(EXIT_FAILURE);
         }
 
-        /* cd is manipulates current process, no fork. */
+        /* cd manipulates current process, no fork. */
         if (has_prefix(inbuf, "cd ") == 0)
         {
             inbuf[strlen(inbuf) - 1] = '\0';

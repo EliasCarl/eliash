@@ -77,9 +77,6 @@ void run_command(cmd *command)
             exit(EXIT_FAILURE);
         }
 
-        /* leftcmd and rightcmd must be exec cmds for now.
-         * Since the parser can't handle anything else. */
-
         int pid = fork();
         if (pid == 0)
         {

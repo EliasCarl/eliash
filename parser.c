@@ -1,4 +1,23 @@
-/* All parser functions. */
+/*
+ * The functions to parse a command sent to the shell. A command is
+ * parsed into on of three types: CMD_EXEC, CMD_REDIR and CMD_PIPE.
+ * The redirection and pipe command structs are just compounds of
+ * the exec command, indicating to the shell that some shuffling
+ * of file descriptors should take place before calling execv().
+ * These three types are "unioned" into a more general type (cmd)
+ * which will be executed by the shell.
+ *
+ * See eliash.h for a more detailed description of these types.
+ *
+ * The parser takes the given command string and tokenizes it 
+ * _in place_. That is, where a delimiter of some sort is found,
+ * the parser terminates the string at that place. This is similar
+ * to what strtok() does, and strok should probably be used instead.
+ * But since I'm just doing this for learning purposes I'll just
+ * keep my implementation for the moment.
+ *
+ * TODO: Implement checking for MAXARGS.
+ */
 
 #include "eliash.h"
 

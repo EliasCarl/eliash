@@ -11,7 +11,7 @@
 #define MAXARGS 10
 #define BUFLEN 100
 
-/* Resolve circular dependency in structs. */
+/* Resolve circular dependency. */
 typedef struct cmd cmd;
 
 typedef enum {
@@ -20,10 +20,22 @@ typedef enum {
     CMD_PIPE
 } cmd_type;
 
+/*
+ * An execution command is the fundamental type. It is, as always,
+ * the arguments to the command and nothing else. argv[0] is the
+ * name of the program to execute. The full path of the program
+ * must be used (i.e. /bin/ls) since the shell doesn't search PATH.
+ */
 typedef struct exec {
     char *argv[MAXARGS];
 } cmd_exec;
 
+/*
+ * A redirection is a command (see more the general cmd type below)
+ * which should have its stdio file descriptors changed before being
+ * executed. It needs a filepath to the file involved in the redir,
+ * and the filedescriptor to open that file on. 
+ */
 typedef struct redir {
     cmd     *cmd;
     char    *fp;
@@ -31,6 +43,9 @@ typedef struct redir {
     int      fd;
 } cmd_redir;
 
+/*
+ *
+ */
 typedef struct pipe {
     cmd     *left;
     cmd     *right;

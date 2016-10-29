@@ -23,20 +23,10 @@
 
 cmd* parse_input(char *cmdstr)
 {
-    char *pc; // Ptr to pipe char.
+    char *pc;
     if (pc = strchr(cmdstr, '|'))
     {
-        /* 
-         * There is a pipe character. For now assume there is only
-         * _one_ pipe. Chop the cmdstr into the cmd before and after
-         * the pipe (|) character, parse these and put into a pipecmd.
-         *
-         * TODO: What if pipe char is in beginning or end of cmdstr?
-         */
-
-        /* Chop the string where the pipe was. */
         *pc = '\0';
-
         char *right  = pc + 1;
         char *left = cmdstr;
         return build_pipe(parse_tokens(left), parse_tokens(right));
@@ -45,13 +35,6 @@ cmd* parse_input(char *cmdstr)
 }
 
 
-/* 
- * Parse and chop tokens in cmdstr _in place_. This means that every
- * token separated by some delimiters (whitespace) gets chopped into
- * their own null-terminated strings and placed into argv. 
- *
- * TODO: Simple implementation of _one_ pipe.
- */
 char whitespace[] = " \t\r\n\v";
 cmd* parse_tokens(char *cmdstr)
 {

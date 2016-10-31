@@ -39,10 +39,6 @@ int main(void)
         {
             cmd *command = parse_command(inbuf);
             run_command(command);
-
-            /*
-             * run_command should never return!
-             */
         }
         wait(NULL);
         fprintf(stderr, "Wait returned\n");
@@ -89,9 +85,8 @@ void run_command(cmd *command)
         if (pid == 0)
         {
             /* Fork a new process for leftcmd. */
+            dup2(pipefd[1], 1);
             close(pipefd[0]);  // Close read end of pipe.
-            fclose(stdout);    // Free stdout.
-            dup(pipefd[1]);    // Open write end on stdout.
             close(pipefd[1]);  // Close pipe after duped fd.
 
             /* stdout now writes to pipe. */
@@ -103,12 +98,11 @@ void run_command(cmd *command)
         if (pid == 0)
         {
             /* Fork a new process for rightcmd. */
-            close(pipefd[1]);  // Close write end of pipe.
-            fclose(stdin);     // Free stdin.
-            dup(pipefd[0]);    // Open read end on stdin.
+            dup2(pipefd[0], 0);
             close(pipefd[0]);  // Close pipe after duped fd.
+            close(pipefd[1]);  // Close write end of pipe.
 
-            /* stdout now writes to pipe. */
+            /* stdin now reads from pipe. */
             fprintf(stderr, "Running right command...\n");
             run_command(command->data.pipe.right);
         }
@@ -121,4 +115,5 @@ void run_command(cmd *command)
         wait(NULL);
         wait(NULL);
     }
+    exit(EXIT_SUCCESS);
 }

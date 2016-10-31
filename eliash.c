@@ -6,8 +6,6 @@ int main(void)
     static char inbuf[BUFLEN]; 
     while (1)
     {
-        printf("pid:%d\n", getpid());
-        printf("inbuf:%s\n", inbuf);
         printf("$ ");
 
         if (fgets(inbuf, BUFLEN, stdin) == NULL)
@@ -27,7 +25,6 @@ int main(void)
             continue;
         }
 
-        fprintf(stderr, "Forking for cmd\n");
         int pid = fork();
         if (pid == -1)
         {
@@ -40,8 +37,8 @@ int main(void)
             cmd *command = parse_command(inbuf);
             run_command(command);
         }
+
         wait(NULL);
-        fprintf(stderr, "Wait returned\n");
     }
     exit(EXIT_SUCCESS);
 }
@@ -50,7 +47,6 @@ void run_command(cmd *command)
 {
     if (command->type == CMD_EXEC)
     {
-        fprintf(stderr, "Execing %s...\n", command->data.exec.argv[0]);
         int ret = execv(command->data.exec.argv[0], command->data.exec.argv);
         if (ret == -1)
         {
@@ -65,15 +61,6 @@ void run_command(cmd *command)
     }
     else if (command->type == CMD_PIPE)
     {
-        fprintf(stderr, "Executing pipe...\n");
-
-        /*
-         * TODO: How to deal with more than one pipe? Considering this
-         * input: "/bin/echo hej | /bin/cat | /bin/less", the middle 
-         * command is both a right and left end of a pipe. These kinds
-         * of pipes are still undefined and are not handled.
-         */
-
         int pipefd[2];
         if (pipe(pipefd) < 0)
         {
@@ -84,26 +71,22 @@ void run_command(cmd *command)
         int pid = fork();
         if (pid == 0)
         {
-            /* Fork a new process for leftcmd. */
             dup2(pipefd[1], 1);
-            close(pipefd[0]);  // Close read end of pipe.
-            close(pipefd[1]);  // Close pipe after duped fd.
+            close(pipefd[0]);
+            close(pipefd[1]);
 
-            /* stdout now writes to pipe. */
-            fprintf(stderr, "Running left command...\n");
+            /* stdout now writes to pipe write-end. */
             run_command(command->data.pipe.left);
         }
 
         pid = fork();
         if (pid == 0)
         {
-            /* Fork a new process for rightcmd. */
             dup2(pipefd[0], 0);
-            close(pipefd[0]);  // Close pipe after duped fd.
-            close(pipefd[1]);  // Close write end of pipe.
+            close(pipefd[0]);
+            close(pipefd[1]);
 
-            /* stdin now reads from pipe. */
-            fprintf(stderr, "Running right command...\n");
+            /* stdin now reads from pipe read-end. */
             run_command(command->data.pipe.right);
         }
 
@@ -111,9 +94,19 @@ void run_command(cmd *command)
         close(pipefd[0]);
         close(pipefd[1]);
 
-        /* Wair for both children to finish. */
+        /* Wait for both children to finish. */
         wait(NULL);
         wait(NULL);
     }
+
+    /*
+     * It's important that we exit here. If we don't, this process
+     * will return from run_command and go into its own read/eval
+     * loop. This exit makes sure that when a redirection or pipe
+     * has forked its children and done its work, it exits, just 
+     * as if it was its own command. Pipes and redirections are
+     * then transparent to the read eval loop and execute just as
+     * single exec commands.
+     */
     exit(EXIT_SUCCESS);
 }

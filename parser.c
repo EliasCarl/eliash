@@ -99,9 +99,11 @@ cmd* build_exec(char *argv[], int argc)
     command->type = CMD_EXEC;
 
     /* Copy parsed args into the exec struct. */
-    for (int i = 0; i < argc; i++)
+    int i;
+    for (i = 0; i < argc; i++)
         command->data.exec.argv[i] = argv[i];
 
+    argv[++i] = NULL; // execv needs null terminated argv.
     return command;
 }
 

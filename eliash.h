@@ -9,7 +9,7 @@
 #include <sys/wait.h>
 
 #define MAXARGS 10
-#define BUFLEN 100
+#define BUFLEN 1024
 
 /* Resolve circular dependency. */
 typedef struct cmd cmd;

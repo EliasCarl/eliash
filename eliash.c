@@ -6,12 +6,14 @@ int main(void)
     static char inbuf[BUFLEN]; 
     while (1)
     {
+        printf("pid:%d\n", getpid());
+        printf("inbuf:%s\n", inbuf);
         printf("$ ");
 
         if (fgets(inbuf, BUFLEN, stdin) == NULL)
         {
             fprintf(stderr, "Error reading input\n");
-            //exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
 
         /* cd manipulates current process, no fork. */
@@ -25,6 +27,7 @@ int main(void)
             continue;
         }
 
+        fprintf(stderr, "Forking for cmd\n");
         int pid = fork();
         if (pid == -1)
         {
@@ -36,11 +39,13 @@ int main(void)
         {
             cmd *command = parse_command(inbuf);
             run_command(command);
+
+            /*
+             * run_command should never return!
+             */
         }
-        else
-        {
-            wait(NULL);
-        }
+        wait(NULL);
+        fprintf(stderr, "Wait returned\n");
     }
     exit(EXIT_SUCCESS);
 }
@@ -49,14 +54,22 @@ void run_command(cmd *command)
 {
     if (command->type == CMD_EXEC)
     {
-        execv(command->data.exec.argv[0], command->data.exec.argv);
+        fprintf(stderr, "Execing %s...\n", command->data.exec.argv[0]);
+        int ret = execv(command->data.exec.argv[0], command->data.exec.argv);
+        if (ret == -1)
+        {
+            perror("execv");
+            exit(EXIT_FAILURE);
+        }
     }
     else if (command->type == CMD_REDIR)
     {
         fprintf(stderr, "Redirection not implemented.");
+        exit(EXIT_FAILURE);
     }
     else if (command->type == CMD_PIPE)
     {
+        fprintf(stderr, "Executing pipe...\n");
 
         /*
          * TODO: How to deal with more than one pipe? Considering this
@@ -82,6 +95,7 @@ void run_command(cmd *command)
             close(pipefd[1]);  // Close pipe after duped fd.
 
             /* stdout now writes to pipe. */
+            fprintf(stderr, "Running left command...\n");
             run_command(command->data.pipe.left);
         }
 
@@ -90,11 +104,12 @@ void run_command(cmd *command)
         {
             /* Fork a new process for rightcmd. */
             close(pipefd[1]);  // Close write end of pipe.
-            fclose(stdin);     // Free stdout.
-            dup(pipefd[0]);    // Open write end on stdout.
+            fclose(stdin);     // Free stdin.
+            dup(pipefd[0]);    // Open read end on stdin.
             close(pipefd[0]);  // Close pipe after duped fd.
 
             /* stdout now writes to pipe. */
+            fprintf(stderr, "Running right command...\n");
             run_command(command->data.pipe.right);
         }
 

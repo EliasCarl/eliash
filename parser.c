@@ -17,6 +17,8 @@
  * keep my implementation for the moment.
  *
  * TODO: Implement checking for MAXARGS.
+ * TODO: Cleaner solution for redirection.
+ * TODO: Generalize redirection to work with execs and files.
  */
 
 #include "eliash.h"

@@ -30,19 +30,25 @@ cmd* parse_command(char *cmdstr)
     if ((modifier = strchr(cmdstr, '|')))
     {
         (*modifier) = '\0';
-        return build_pipe(parse_exec(cmdbeginning), parse_command(modifier + 1));
+        return build_pipe(parse_command(cmdbeginning), parse_command(modifier + 1));
     }
 
     if ((modifier = strchr(cmdstr, '>')))
     {
         (*modifier) = '\0';
-        return build_redir(parse_exec(cmdbeginning), "/home/elias/hej.txt", O_WRONLY, 1);
+        char *fp = modifier + 1;
+        fp = get_next_token(fp, whitespace);
+        *(get_token_end(fp, whitespace)) = '\0';
+        return build_redir(parse_command(cmdbeginning), fp, O_WRONLY, 1);
     }
 
-    if ((modifier = strchr(cmdstr, '>')))
+    if ((modifier = strchr(cmdstr, '<')))
     {
         (*modifier) = '\0';
-        return build_redir(parse_exec(cmdbeginning), "/home/elias/hej.txt", O_RDONLY, 0);
+        char *fp = modifier + 1;
+        fp = get_next_token(fp, whitespace);
+        *(get_token_end(fp, whitespace)) = '\0';
+        return build_redir(parse_command(cmdbeginning), fp, O_RDONLY, 0);
     }
 
     return parse_exec(cmdbeginning);

@@ -58,7 +58,7 @@ void run_command(cmd *command)
     {
         int fd = open(command->data.redir.fp, command->data.redir.mode);
         dup2(fd, command->data.redir.fd);
-        fprintf(stderr, "Running redir");
+        fprintf(stderr, "Running redir\n");
         run_command(command->data.redir.cmd);
     }
     else if (command->type == CMD_PIPE)

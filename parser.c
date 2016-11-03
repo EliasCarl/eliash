@@ -22,23 +22,29 @@
 #include "eliash.h"
 static char whitespace[] = " \t\r\n\v";
 
-/*
- * Search for the exec commands and construct them with whatever
- * redirection and piping can be found. When an exec command has
- * been isolated, it is parsed and built by parse_exec.
- */
 cmd* parse_command(char *cmdstr)
 {
     char *cmdbeginning = cmdstr;
-    while (*cmdstr)
+    char *modifier;
+    
+    if ((modifier = strchr(cmdstr, '|')))
     {
-        if (*cmdstr == '|')
-        {
-            (*cmdstr) = '\0';
-            return build_pipe(parse_exec(cmdbeginning), parse_command(cmdstr + 1));
-        }
-        cmdstr++;
+        (*modifier) = '\0';
+        return build_pipe(parse_exec(cmdbeginning), parse_command(modifier + 1));
     }
+
+    if ((modifier = strchr(cmdstr, '>')))
+    {
+        (*modifier) = '\0';
+        return build_redir(parse_exec(cmdbeginning), "/home/elias/hej.txt", O_WRONLY, 1);
+    }
+
+    if ((modifier = strchr(cmdstr, '>')))
+    {
+        (*modifier) = '\0';
+        return build_redir(parse_exec(cmdbeginning), "/home/elias/hej.txt", O_RDONLY, 0);
+    }
+
     return parse_exec(cmdbeginning);
 }
 
@@ -114,6 +120,19 @@ cmd* build_pipe(cmd *left, cmd *right)
     command->data.pipe.left = left;
     command->data.pipe.right = right;
     return command;
+}
+
+cmd* build_redir(cmd *command, char *fp, int mode, int fd)
+{
+    cmd *comm = malloc(sizeof(cmd));
+    char *path = malloc(sizeof(char) * strlen(fp) + 1);
+    strcpy(path, fp);
+    comm->type = CMD_REDIR;
+    comm->data.redir.cmd = command;
+    comm->data.redir.fp = path;
+    comm->data.redir.mode = mode;
+    comm->data.redir.fd = fd;
+    return comm;
 }
 
 /* Utility functions. */

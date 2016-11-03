@@ -56,8 +56,10 @@ void run_command(cmd *command)
     }
     else if (command->type == CMD_REDIR)
     {
-        fprintf(stderr, "Redirection not implemented.");
-        exit(EXIT_FAILURE);
+        int fd = open(command->data.redir.fp, command->data.redir.mode);
+        dup2(fd, command->data.redir.fd);
+        fprintf(stderr, "Running redir");
+        run_command(command->data.redir.cmd);
     }
     else if (command->type == CMD_PIPE)
     {

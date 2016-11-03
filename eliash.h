@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 #define MAXARGS 10
@@ -75,6 +77,7 @@ void run_command(cmd *command);
 cmd* parse_exec(char *execstr);
 cmd* build_exec(char *argv[], int argc);
 cmd* build_pipe(cmd *left, cmd *right);
+cmd* build_redir(cmd *cmd, char *fp, int mode, int fd);
 cmd* parse_command(char *cmdstr);
 char* locate_beginning(char *str, char *trimchars); 
 char* locate_end(char *str, char *trimchars);

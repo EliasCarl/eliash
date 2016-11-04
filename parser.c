@@ -41,7 +41,7 @@ cmd* parse_command(char *cmdstr)
         char *fp = modifier + 1;
         fp = get_next_token(fp, whitespace);
         *(get_token_end(fp, whitespace)) = '\0';
-        return build_redir(parse_command(cmdbeginning), fp, O_WRONLY, 1);
+        return build_redir(parse_command(cmdbeginning), fp, O_CREAT, 1);
     }
 
     if ((modifier = strchr(cmdstr, '<')))
@@ -144,11 +144,6 @@ cmd* build_redir(cmd *command, char *fp, int mode, int fd)
 }
 
 /* Utility functions. */
-
-int has_prefix(char *string, char *prefix)
-{
-    return strncmp(prefix, string, strlen(prefix));
-}
 
 char* trimcmd(char *cmd, char *trimchars)
 {

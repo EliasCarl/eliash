@@ -72,6 +72,10 @@ typedef struct cmd {
 } cmd;
 
 void run_command(cmd *command);
+void run_pipe(cmd_pipe *pipe);
+void run_redir(cmd_redir *redircmd);
+void run_exec(cmd_exec *execcmd);
+void changedir(char *inbuf);
 
 /* Parser functions. */
 cmd* parse_exec(char *execstr);
@@ -85,9 +89,11 @@ char* get_token_end(char *token, char *delimiters);
 char* get_next_token(char *beginning, char *delimiters);
 
 /* Helper/utility functions. */
+pid_t ecfork(void);
 int has_prefix(char *string, char *prefix);
 void del_trailing(char *str, char *trimchars);
 char* del_leading(char *str, char *trimchars);
 char* trimcmd(char *cmd, char *trimchars);
+void fatal(char *msg);
 
 #endif

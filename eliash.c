@@ -1,104 +1,44 @@
 #include "eliash.h"
 
-/* Begin read-eval loop. */
 int main(void)
 {
+    pid_t pid;
     static char inbuf[BUFLEN]; 
     while (1)
     {
         printf("$ ");
 
         if (fgets(inbuf, BUFLEN, stdin) == NULL)
-        {
-            fprintf(stderr, "Error reading input\n");
-            exit(EXIT_FAILURE);
-        }
+            fatal("Error reading input");
 
-        /* cd manipulates current process, no fork. */
-        if (has_prefix(inbuf, "cd ") == 0)
+        if (has_prefix(inbuf, "cd "))
         {
-            inbuf[strlen(inbuf) - 1] = '\0';
-            if (chdir(inbuf + 3) < 0)
-            {
-                perror("Cannot cd");
-            }
-            continue;
+            /* cd manipulates current process, don't fork. */
+            changedir(inbuf);
         }
-
-        int pid = fork();
-        if (pid == -1)
+        else
         {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
+            if ( (pid = ecfork()) == 0 )
+                run_command(parse_command(inbuf)); // Doesn't return!
 
-        if (pid == 0)
-        {
-            cmd *command = parse_command(inbuf);
-            run_command(command);
+            wait(NULL);
         }
-
-        wait(NULL);
     }
-    exit(EXIT_SUCCESS);
 }
 
 void run_command(cmd *command)
 {
     if (command->type == CMD_EXEC)
     {
-        int ret = execv(command->data.exec.argv[0], command->data.exec.argv);
-        if (ret == -1)
-        {
-            perror("execv");
-            exit(EXIT_FAILURE);
-        }
+        run_exec(&command->data.exec);
     }
     else if (command->type == CMD_REDIR)
     {
-        int fd = open(command->data.redir.fp, command->data.redir.mode);
-        dup2(fd, command->data.redir.fd);
-        fprintf(stderr, "Running redir\n");
-        run_command(command->data.redir.cmd);
+        run_redir(&command->data.redir);
     }
     else if (command->type == CMD_PIPE)
     {
-        int pipefd[2];
-        if (pipe(pipefd) < 0)
-        {
-            perror("Error establishing pipe.");
-            exit(EXIT_FAILURE);
-        }
-
-        int pid = fork();
-        if (pid == 0)
-        {
-            dup2(pipefd[1], 1);
-            close(pipefd[0]);
-            close(pipefd[1]);
-
-            /* stdout now writes to pipe write-end. */
-            run_command(command->data.pipe.left);
-        }
-
-        pid = fork();
-        if (pid == 0)
-        {
-            dup2(pipefd[0], 0);
-            close(pipefd[0]);
-            close(pipefd[1]);
-
-            /* stdin now reads from pipe read-end. */
-            run_command(command->data.pipe.right);
-        }
-
-        /* Close pipe in parent process. */
-        close(pipefd[0]);
-        close(pipefd[1]);
-
-        /* Wait for both children to finish. */
-        wait(NULL);
-        wait(NULL);
+        run_pipe(&command->data.pipe);
     }
 
     /*
@@ -111,4 +51,81 @@ void run_command(cmd *command)
      * single exec commands.
      */
     exit(EXIT_SUCCESS);
+}
+
+void run_exec(cmd_exec *execcmd)
+{
+    if (execv(execcmd->argv[0], execcmd->argv) == -1)
+        fatal("execv");
+}
+
+void run_redir(cmd_redir *redircmd)
+{
+    int file = open(redircmd->fp, redircmd->mode);
+    dup2(file, redircmd->fd);
+    run_command(redircmd->cmd);
+}
+
+void run_pipe(cmd_pipe *pipecmd)
+{
+    pid_t pid;
+    int pipefd[2];
+
+    if (pipe(pipefd) < 0)
+        fatal("Error establishing pipe.");
+
+    if ( (pid = ecfork()) == 0 )
+    {
+        dup2(pipefd[1], 1);
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        /* stdout now writes to pipe write-end. */
+        run_command(pipecmd->left);
+    }
+
+    if ( (pid = ecfork()) == 0 )
+    {
+        dup2(pipefd[0], 0);
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        /* stdin now reads from pipe read-end. */
+        run_command(pipecmd->right);
+    }
+
+    /* Close pipe in parent process. */
+    close(pipefd[0]);
+    close(pipefd[1]);
+
+    /* Wait for both children to finish. */
+    wait(NULL);
+    wait(NULL);
+}
+
+void changedir(char *inbuf)
+{
+    inbuf[strlen(inbuf) - 1] = '\0';
+    if (chdir(inbuf + 3) < 0)
+        fatal("Cannot cd");
+}
+
+int has_prefix(char *string, char *prefix)
+{
+    return !strncmp(prefix, string, strlen(prefix));
+}
+
+/* Error checked forking. */
+pid_t ecfork()
+{
+    pid_t pid = fork();
+    if (pid == -1) fatal("Forking error");
+    if (pid == 0)  return 0;
+    else           return pid;
+}
+
+void fatal(char *msg)
+{
+    perror(msg); 
+    exit(EXIT_FAILURE);
 }

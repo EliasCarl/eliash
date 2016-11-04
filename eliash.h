@@ -1,6 +1,8 @@
 #ifndef ELIASH_H
 #define ELIASH_H
 
+#define _GNU_SOURCE // execvpe
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

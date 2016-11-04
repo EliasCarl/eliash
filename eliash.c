@@ -1,5 +1,7 @@
 #include "eliash.h"
 
+extern char **environ;
+
 int main(void)
 {
     pid_t pid;
@@ -49,7 +51,7 @@ void run_command(cmd *command)
 
 void run_exec(cmd_exec *execcmd)
 {
-    if (execv(execcmd->argv[0], execcmd->argv) == -1)
+    if (execvpe(execcmd->argv[0], execcmd->argv, environ) == -1)
         fatal("execv");
 }
 

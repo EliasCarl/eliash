@@ -12,6 +12,7 @@
 
 #define MAXARGS 10
 #define BUFLEN 1024
+#define CWDBUFLEN 256
 
 /* Resolve circular dependency. */
 typedef struct cmd cmd;
@@ -90,6 +91,7 @@ char* get_next_token(char *beginning, char *delimiters);
 
 /* Helper/utility functions. */
 pid_t ecfork(void);
+char* ecgetcwd(char *buf, size_t size);
 int has_prefix(char *string, char *prefix);
 void del_trailing(char *str, char *trimchars);
 char* del_leading(char *str, char *trimchars);

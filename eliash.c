@@ -4,9 +4,10 @@ int main(void)
 {
     pid_t pid;
     static char inbuf[BUFLEN]; 
+    static char cwd[CWDBUFLEN];
     while (1)
     {
-        printf("$ ");
+        printf("%s $ ", ecgetcwd(cwd, CWDBUFLEN));
 
         if (fgets(inbuf, BUFLEN, stdin) == NULL)
             fatal("Error reading input");
@@ -18,9 +19,8 @@ int main(void)
         }
         else
         {
-            if ( (pid = ecfork()) == 0 )
+            if ((pid = ecfork()) == 0)
                 run_command(parse_command(inbuf)); // Doesn't return!
-
             wait(NULL);
         }
     }
@@ -29,17 +29,11 @@ int main(void)
 void run_command(cmd *command)
 {
     if (command->type == CMD_EXEC)
-    {
         run_exec(&command->data.exec);
-    }
     else if (command->type == CMD_REDIR)
-    {
         run_redir(&command->data.redir);
-    }
     else if (command->type == CMD_PIPE)
-    {
         run_pipe(&command->data.pipe);
-    }
 
     /*
      * It's important that we exit here. If we don't, this process
@@ -74,7 +68,7 @@ void run_pipe(cmd_pipe *pipecmd)
     if (pipe(pipefd) < 0)
         fatal("Error establishing pipe.");
 
-    if ( (pid = ecfork()) == 0 )
+    if ((pid = ecfork()) == 0)
     {
         dup2(pipefd[1], 1);
         close(pipefd[0]);
@@ -84,7 +78,7 @@ void run_pipe(cmd_pipe *pipecmd)
         run_command(pipecmd->left);
     }
 
-    if ( (pid = ecfork()) == 0 )
+    if ((pid = ecfork()) == 0)
     {
         dup2(pipefd[0], 0);
         close(pipefd[0]);
@@ -122,6 +116,14 @@ pid_t ecfork()
     if (pid == -1) fatal("Forking error");
     if (pid == 0)  return 0;
     else           return pid;
+}
+
+/* Error checked getcwd. */
+char* ecgetcwd(char *buf, size_t size)
+{
+    if (!getcwd(buf, size))
+        fatal("getcwd");
+    return buf;
 }
 
 void fatal(char *msg)

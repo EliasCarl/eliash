@@ -25,34 +25,32 @@ static char whitespace[] = " \t\r\n\v";
 
 cmd* parse_command(char *cmdstr)
 {
-    char *cmdbeginning = cmdstr;
-    char *modifier;
+    char *leftcmd = cmdstr;
+    char *rightcmd;
     
-    if ((modifier = strchr(cmdstr, '|')))
+    if ((rightcmd = strchr(cmdstr, '|')))
     {
-        (*modifier) = '\0';
-        return build_pipe(parse_command(cmdbeginning), parse_command(modifier + 1));
+        *(rightcmd++) = '\0';
+        return build_pipe(parse_command(leftcmd), parse_command(rightcmd));
     }
 
-    if ((modifier = strchr(cmdstr, '>')))
+    if ((rightcmd = strchr(cmdstr, '>')))
     {
-        (*modifier) = '\0';
-        char *fp = modifier + 1;
-        fp = get_next_token(fp, whitespace);
-        *(get_token_end(fp, whitespace)) = '\0';
-        return build_redir(parse_command(cmdbeginning), fp, O_CREAT, 1);
+        *(rightcmd++) = '\0';
+        rightcmd = get_next_token(rightcmd, whitespace);
+        *(get_token_end(rightcmd, whitespace)) = '\0';
+        return build_redir(parse_command(leftcmd), rightcmd, O_CREAT, 1);
     }
 
-    if ((modifier = strchr(cmdstr, '<')))
+    if ((rightcmd = strchr(cmdstr, '<')))
     {
-        (*modifier) = '\0';
-        char *fp = modifier + 1;
-        fp = get_next_token(fp, whitespace);
-        *(get_token_end(fp, whitespace)) = '\0';
-        return build_redir(parse_command(cmdbeginning), fp, O_RDONLY, 0);
+        *(rightcmd++) = '\0';
+        rightcmd = get_next_token(rightcmd, whitespace);
+        *(get_token_end(rightcmd, whitespace)) = '\0';
+        return build_redir(parse_command(leftcmd), rightcmd, O_RDONLY, 0);
     }
 
-    return parse_exec(cmdbeginning);
+    return parse_exec(leftcmd);
 }
 
 cmd* parse_exec(char *execstr)
@@ -65,7 +63,7 @@ cmd* parse_exec(char *execstr)
     int argc = 0;
 
     char *token = execstr;
-    while (token)
+    while (token && argc < (MAXARGS - 1))
     {
         token_end = get_token_end(token, whitespace); 
         *token_end = '\0';

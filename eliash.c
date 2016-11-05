@@ -102,8 +102,7 @@ void run_pipe(cmd_pipe *pipecmd)
 void changedir(char *inbuf)
 {
     inbuf[strlen(inbuf) - 1] = '\0';
-    if (chdir(inbuf + 3) < 0)
-        fatal("Cannot cd");
+    if (chdir(inbuf + 3) < 0) fatal("Cannot cd");
 }
 
 int has_prefix(char *string, char *prefix)
@@ -116,15 +115,13 @@ pid_t ecfork()
 {
     pid_t pid = fork();
     if (pid == -1) fatal("Forking error");
-    if (pid == 0)  return 0;
-    else           return pid;
+    return pid;
 }
 
 /* Error checked getcwd. */
 char* ecgetcwd(char *buf, size_t size)
 {
-    if (!getcwd(buf, size))
-        fatal("getcwd");
+    if (!getcwd(buf, size)) fatal("getcwd");
     return buf;
 }
 

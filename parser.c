@@ -16,7 +16,6 @@
  * But since I'm just doing this for learning purposes I'll just
  * keep my implementation for the moment.
  *
- * TODO: Implement checking for MAXARGS.
  * TODO: Cleaner solution for redirection.
  * TODO: Generalize redirection to work with execs and files.
  */
@@ -58,25 +57,22 @@ cmd* parse_command(char *cmdstr)
 
 cmd* parse_exec(char *execstr)
 {
-    /* Trim leading and trailing whitespace. */
-    execstr = trimcmd(execstr, whitespace);
+    del_trailing(execstr, whitespace);
+    execstr = del_leading(execstr, whitespace);
 
-    char *argv[MAXARGS];
+    char **argv = malloc(sizeof(char *) * MAXARGS);
+    char *token_end;
     int argc = 0;
 
     char *token = execstr;
     while (token)
     {
-        /* Chop this token. */
-        char *token_end = get_token_end(token, whitespace); 
+        token_end = get_token_end(token, whitespace); 
         *token_end = '\0';
-
-        /* Point current arg to this token. */
-        argv[argc] = token;
-        argc++;
-
+        argv[argc++] = token;
         token = get_next_token(token_end + 1, whitespace);
     }
+    argv[argc] = NULL; // execvpe expects null terminated list.
     return build_exec(argv, argc);
 }
 
@@ -107,17 +103,13 @@ char* get_next_token(char *token, char *delimiters)
     return NULL; // No next token exists.
 }
 
-cmd* build_exec(char *argv[], int argc)
+/* Constructors */
+
+cmd* build_exec(char **argv, int argc)
 {
     cmd *command = malloc(sizeof(cmd));
     command->type = CMD_EXEC;
-
-    /* Copy parsed args into the exec struct. */
-    int i;
-    for (i = 0; i < argc; i++)
-        command->data.exec.argv[i] = argv[i];
-
-    argv[++i] = NULL; // execv needs null terminated argv.
+    command->data.exec.argv = argv;
     return command;
 }
 
@@ -130,22 +122,22 @@ cmd* build_pipe(cmd *left, cmd *right)
     return command;
 }
 
-cmd* build_redir(cmd *command, char *fp, int mode, int fd)
+cmd* build_redir(cmd *exec, char *fp, int mode, int fd)
 {
-    cmd *comm = malloc(sizeof(cmd));
+    cmd *command = malloc(sizeof(cmd));
     char *path = malloc(sizeof(char) * strlen(fp) + 1);
     strcpy(path, fp);
-    comm->type = CMD_REDIR;
-    comm->data.redir.cmd = command;
-    comm->data.redir.fp = path;
-    comm->data.redir.mode = mode;
-    comm->data.redir.fd = fd;
-    return comm;
+    command->type = CMD_REDIR;
+    command->data.redir.cmd = exec;
+    command->data.redir.fp = path;
+    command->data.redir.mode = mode;
+    command->data.redir.fd = fd;
+    return command;
 }
 
 /* Utility functions. */
 
-char* trimcmd(char *cmd, char *trimchars)
+char* trim_leading(char *cmd, char *trimchars)
 {
     del_trailing(cmd, trimchars);
     return del_leading(cmd, trimchars);

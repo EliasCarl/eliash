@@ -32,7 +32,7 @@ typedef enum {
  * must be used (i.e. /bin/ls) since the shell doesn't search PATH.
  */
 typedef struct exec {
-    char *argv[MAXARGS];
+    char **argv;
 } cmd_exec;
 
 /*
@@ -97,7 +97,5 @@ char* ecgetcwd(char *buf, size_t size);
 int has_prefix(char *string, char *prefix);
 void del_trailing(char *str, char *trimchars);
 char* del_leading(char *str, char *trimchars);
-char* trimcmd(char *cmd, char *trimchars);
 void fatal(char *msg);
-
 #endif

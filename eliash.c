@@ -57,7 +57,7 @@ void run_exec(cmd_exec *execcmd)
 
 void run_redir(cmd_redir *redircmd)
 {
-    int file = open(redircmd->fp, redircmd->mode);
+    int file = open(redircmd->fp, redircmd->mode, CREATE_MODE);
     dup2(file, redircmd->fd);
     run_command(redircmd->cmd);
 }

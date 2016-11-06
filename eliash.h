@@ -16,6 +16,12 @@
 #define BUFLEN 1024
 #define CWDBUFLEN 256
 
+/* 
+ * The mode to use in case a new file is created in redirection.
+ * See man 2 open for more information on these modes.
+ */
+#define CREATE_MODE S_IRWXU|S_IRWXG|S_IRWXO
+
 /* Resolve circular dependency. */
 typedef struct cmd cmd;
 

@@ -39,7 +39,7 @@ cmd* parse_command(char *cmdstr)
         *(rightcmd++) = '\0';
         rightcmd = get_next_token(rightcmd, whitespace);
         *(get_token_end(rightcmd, whitespace)) = '\0';
-        return build_redir(parse_command(leftcmd), rightcmd, O_CREAT, 1);
+        return build_redir(parse_command(leftcmd), rightcmd, O_WRONLY|O_CREAT, 1);
     }
 
     if ((rightcmd = strchr(cmdstr, '<')))
